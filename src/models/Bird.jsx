@@ -1,12 +1,47 @@
-import { useGLTF } from '@react-three/drei';
+import { useAnimations, useGLTF } from '@react-three/drei';
 import birdScene from '../assets/3d/bird.glb'
+import { useEffect, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 
 const Bird = () => {
-    const bird = useGLTF(birdScene);
-    
+    const { scene, animations } = useGLTF(birdScene);
+    const birdRef = useRef();
+    const { actions } = useAnimations(animations, birdRef)
+
+    // Play the "Take 001" animation when the component mounts
+    // Note: Animation names can be found on the Sketchfab website where the 3D model is hosted.
+    useEffect(() => {
+        actions['Take 001'].play()
+    }, [])
+
+    useFrame(({ clock, camera }) => {
+        // Update Y position simulate the flight in sin wave
+        birdRef.current.position.y = Math.sin(clock.elapsedTime) * 0.25 + 2
+
+        // Check if the bird reached a certain endpoint relative to the camera
+        if (birdRef.current.position.x > camera.position.x + 10) {
+            // Change direction to backward and rotate the bird 180 degrees on the y-axis
+            birdRef.current.rotation.y = Math.PI
+        } else if (birdRef.current.position.x < camera.position.x - 10) {
+            // Change direction to forward and reset the bird's rotation
+            birdRef.current.rotation.y = 0
+        }
+
+        // Update the X and Z positions based on the direction
+        if (birdRef.current.rotation.y === 0) {
+            // Moving forward
+            birdRef.current.position.x += 0.01;
+            birdRef.current.position.z -= 0.01;
+        } else {
+            // Moving Backward
+            birdRef.current.position.x -= 0.01;
+            birdRef.current.position.z += 0.01;
+        }
+    })
+
     return (
-        <mesh position={[-5, 2, 1]} scale={[0.003, 0.003, 0.003]}>
-            <primitive object={bird.scene} />
+        <mesh ref={birdRef} position={[-5, 2, 1]} scale={[0.003, 0.003, 0.003]}>
+            <primitive object={scene} />
         </mesh>
     )
 }
